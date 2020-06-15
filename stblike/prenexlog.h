@@ -16,7 +16,7 @@
 #ifndef PRENEX_LOG_H
 #define PRENEX_LOG_H
 
-#include <cstdio>
+#include <stdio.h>
 
 /* ****** */
 /* CONFIG */
