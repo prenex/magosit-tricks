@@ -28,7 +28,14 @@
 /* Use this if you need to differentiate from usual printfs and couts more easily (by filtering with vim for example) */
 #define PLOG_TAG "PLog::"
 
-/* Change these according to your needs (if you are using std redirection as in the example below) */
+/* Change these according to your needs - this is just an example config if you would define NDEBUG for release builds for example */
+/*
+#ifdef NDEBUG
+#define PLOG_REDIRECT
+#define PLOG_CUSTOM_PATH
+#endif // NDEBUG
+*/
+
 #define PLOG_OUTFILE "debug_out.txt"
 #define PLOG_ERRFILE "debug_err.txt"
 #define PLOG_WITHOUT_FLUSH_NO 5
@@ -36,6 +43,39 @@
 /* **** */
 /* CODE */
 /* **** */
+
+#ifdef PLOG_CUSTOM_PATH
+/* The full path is generated using custom generator functions */
+/* Let the linker search for these functions that the user provides */
+extern const char *PlogOutfilePath();
+extern const char *PlogErrfilePath();
+#else
+/* The path is the current path and file names are defaulted */
+static inline const char *PlogOutfilePath() {
+	return PLOG_OUTFILE;
+}
+
+static inline const char *PlogErrfilePath() {
+	return PLOG_ERRFILE;
+}
+#endif /* PLOG_CUSTOM_PATH */
+
+/*
+ * Just #define this in (ONLY) one of your C++ files where you want to
+ * implement PLOG_CUSTOM_PATH style functions by their default ones.
+ *
+ * Most useful for complex situations where you need those files for release builds - except for release build unit tests or such!
+ */
+#ifdef PLOG_DEFAULT_PATH_CUSTOM_IMPL
+/* The path is the current path and file names are defaulted */
+const char *PlogOutfilePath() {
+	return PLOG_OUTFILE;
+}
+
+const char *PlogErrfilePath() {
+	return PLOG_ERRFILE;
+}
+#endif /* PLOG_DEFAULT_PATH_CUSTOM_IMPL */
 
 /**
  * Adds std file redirection here for your use cases if needed
@@ -49,20 +89,20 @@ static inline void stdredirect() {
 	/* Simple redirect for std out to support native code logging on unity projects */
 	/* built for example to aid us win10 devices where things go to /dev/null otherwise... */
 	static bool redirected = false;
-	static int flushCounter = __WITHOUT_FLUSH_NO;
+	static int flushCounter = PLOG_WITHOUT_FLUSH_NO;
 	if (!redirected) {
 		/* These files should be autoclosed by the OS in this simple solution... */
 		/* TODO: it might be nicer(?) to buffer stuff in memory and only open files */
 		/*       to write out a whole buffer in append mode and then close that! */
 		FILE *out, *err;
-		freopen_s(&out, PLOG_OUTFILE, "a", stdout);
-		freopen_s(&err, PLOG_ERRFILE, "a", stderr);
+		freopen_s(&out, PlogOutfilePath(), "a", stdout);
+		freopen_s(&err, PlogErrfilePath(), "a", stderr);
 		redirected = true;
 	}
 
 	/* Ensure there are some flushing from time to time */
 	if (--flushCounter < 0) {
-		flushCounter = __WITHOUT_FLUSH_NO;
+		flushCounter = PLOG_WITHOUT_FLUSH_NO;
 		fflush(stdout);
 		fflush(stderr);
 	}
